@@ -1,171 +1,145 @@
 "use client";
 
-import { useState } from "react";
-import type { Session, SessionType } from "@/lib/types";
-import { splitSeconds } from "@/lib/types";
-import { formatSplit, parseDuration } from "@/lib/format";
+import { useActionState, useState } from "react";
+import { createSession, type SessionFormState } from "@/app/actions/sessions";
+import { SESSION_TYPE_LABEL, SESSION_TYPES, type SessionType } from "@/lib/domain";
+import type { Athlete } from "@/db/schema";
+import { btnPrimary, inputClass } from "./ui";
 
-const inputClass =
-  "w-full rounded-lg border border-hairline bg-page px-3 py-2 text-sm text-ink " +
-  "placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-accent";
+export function SessionForm({ athletes }: { athletes: Athlete[] }) {
+  const [state, formAction, pending] = useActionState<SessionFormState, FormData>(
+    createSession,
+    {},
+  );
+  const [type, setType] = useState<SessionType>("water");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const withResults = type === "water" || type === "erg";
 
-export function SessionForm({
-  onAdd,
-  onCancel,
-}: {
-  onAdd: (session: Session) => void;
-  onCancel: () => void;
-}) {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [type, setType] = useState<SessionType>("erg");
-  const [distance, setDistance] = useState("");
-  const [duration, setDuration] = useState("");
-  const [strokeRate, setStrokeRate] = useState("");
-  const [notes, setNotes] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  const distanceMeters = Number(distance);
-  const durationSeconds = parseDuration(duration);
-  const preview =
-    distanceMeters > 0 && durationSeconds
-      ? formatSplit(splitSeconds({ distanceMeters, durationSeconds }))
-      : null;
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!date) return setError("Pick a date.");
-    if (!Number.isFinite(distanceMeters) || distanceMeters <= 0)
-      return setError("Distance must be a positive number of meters.");
-    if (!durationSeconds)
-      return setError("Duration should look like 20:00 (mm:ss) or 1:05:30 (h:mm:ss).");
-    const spm = strokeRate.trim() === "" ? undefined : Number(strokeRate);
-    if (spm !== undefined && (!Number.isFinite(spm) || spm <= 0 || spm > 60))
-      return setError("Stroke rate should be between 1 and 60 strokes per minute.");
-    onAdd({
-      id: crypto.randomUUID(),
-      date,
-      type,
-      distanceMeters,
-      durationSeconds,
-      strokeRate: spm,
-      notes: notes.trim() || undefined,
+  function toggle(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-xl border border-hairline bg-surface-1 p-4"
-      aria-label="Log a session"
-    >
-      <h2 className="text-base font-semibold text-ink">Log a session</h2>
-      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <label className="col-span-1 block">
-          <span className="mb-1 block text-xs text-ink-secondary">Date</span>
+    <form action={formAction} className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="mb-1 block text-sm text-ink-secondary">Date</span>
           <input
             type="date"
-            value={date}
+            name="date"
+            defaultValue={new Date().toISOString().slice(0, 10)}
             max={new Date().toISOString().slice(0, 10)}
-            onChange={(e) => setDate(e.target.value)}
             className={inputClass}
             required
           />
         </label>
-        <div className="col-span-1">
-          <span className="mb-1 block text-xs text-ink-secondary">Type</span>
-          <div className="flex rounded-lg border border-hairline p-0.5" role="radiogroup" aria-label="Session type">
-            {(["erg", "water"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                role="radio"
-                aria-checked={type === t}
-                onClick={() => setType(t)}
-                className={`flex-1 rounded-md px-2 py-1.5 text-sm transition-colors ${
-                  type === t
-                    ? "bg-accent font-medium text-accent-ink"
-                    : "text-ink-secondary hover:text-ink"
-                }`}
-              >
-                {t === "erg" ? "Erg" : "Water"}
-              </button>
+        <label className="block">
+          <span className="mb-1 block text-sm text-ink-secondary">Type</span>
+          <select
+            name="type"
+            value={type}
+            onChange={(e) => setType(e.target.value as SessionType)}
+            className={inputClass}
+          >
+            {SESSION_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {SESSION_TYPE_LABEL[t]}
+              </option>
             ))}
-          </div>
-        </div>
-        <label className="col-span-1 block">
-          <span className="mb-1 block text-xs text-ink-secondary">Distance (m)</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            placeholder="5000"
-            value={distance}
-            onChange={(e) => setDistance(e.target.value)}
-            className={inputClass}
-            required
-          />
+          </select>
         </label>
-        <label className="col-span-1 block">
-          <span className="mb-1 block text-xs text-ink-secondary">Duration (mm:ss)</span>
-          <input
-            type="text"
-            placeholder="20:00"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            className={inputClass}
-            required
-          />
-        </label>
-        <label className="col-span-1 block">
-          <span className="mb-1 block text-xs text-ink-secondary">Stroke rate (spm)</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={60}
-            placeholder="22"
-            value={strokeRate}
-            onChange={(e) => setStrokeRate(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-        <label className="col-span-2 block sm:col-span-3">
-          <span className="mb-1 block text-xs text-ink-secondary">Notes</span>
-          <input
-            type="text"
-            placeholder="Steady state, felt strong"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-      </div>
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          type="submit"
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90"
-        >
-          Save session
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg px-3 py-2 text-sm text-ink-secondary hover:text-ink"
-        >
-          Cancel
-        </button>
-        {preview && (
-          <span className="ml-auto text-sm text-ink-secondary">
-            Avg split{" "}
-            <span className="font-semibold text-ink tabular-nums">{preview} /500m</span>
-          </span>
+        {withResults && (
+          <label className="block">
+            <span className="mb-1 block text-sm text-ink-secondary">Distance (m)</span>
+            <input
+              type="number"
+              name="distanceMeters"
+              inputMode="numeric"
+              min={1}
+              placeholder="12000"
+              className={inputClass}
+            />
+          </label>
         )}
+        <label className="block">
+          <span className="mb-1 block text-sm text-ink-secondary">Duration (mm:ss)</span>
+          <input type="text" name="duration" placeholder="75:00" className={inputClass} />
+        </label>
       </div>
-      {error && (
-        <p role="alert" className="mt-2 text-sm text-delta-bad">
-          {error}
+      <label className="block">
+        <span className="mb-1 block text-sm text-ink-secondary">Notes</span>
+        <input
+          name="notes"
+          placeholder="Steady state, focus on catches"
+          className={inputClass}
+        />
+      </label>
+
+      <fieldset>
+        <legend className="mb-1 text-sm text-ink-secondary">
+          Who was there?{" "}
+          <span className="text-ink-muted">
+            {withResults ? "— add a time or rate per athlete if you have one" : ""}
+          </span>
+        </legend>
+        <div className="overflow-hidden rounded-lg border border-hairline">
+          {athletes.map((a) => {
+            const on = selected.has(a.id);
+            return (
+              <div
+                key={a.id}
+                className="flex flex-wrap items-center gap-2 border-b border-hairline px-3 py-2 last:border-b-0"
+              >
+                <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 py-1">
+                  <input
+                    type="checkbox"
+                    name="athletes"
+                    value={a.id}
+                    checked={on}
+                    onChange={() => toggle(a.id)}
+                    className="h-5 w-5 shrink-0 accent-(--accent)"
+                  />
+                  <span className="truncate text-sm text-ink">{a.name}</span>
+                </label>
+                {on && withResults && (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      name={`time-${a.id}`}
+                      placeholder="time 48:20"
+                      aria-label={`Time for ${a.name}`}
+                      className={`${inputClass} w-28 px-2 py-1.5 text-sm`}
+                    />
+                    <input
+                      type="number"
+                      name={`spm-${a.id}`}
+                      placeholder="spm"
+                      aria-label={`Stroke rate for ${a.name}`}
+                      min={1}
+                      max={60}
+                      className={`${inputClass} w-20 px-2 py-1.5 text-sm`}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      {state.error && (
+        <p role="alert" className="text-sm text-delta-bad">
+          {state.error}
         </p>
       )}
+      <button type="submit" disabled={pending} className={btnPrimary}>
+        {pending ? "Saving…" : "Save session"}
+      </button>
     </form>
   );
 }

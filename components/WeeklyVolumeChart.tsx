@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { WeekBucket } from "@/lib/stats";
+import type { WeekBucket } from "@/lib/queries";
 import { formatDateShort } from "@/lib/format";
 import { useMeasure } from "@/lib/useMeasure";
 import { ChartTooltip } from "./ChartTooltip";
@@ -12,7 +12,7 @@ const MARGIN = { top: 12, right: 8, bottom: 26, left: 48 };
 function niceCeil(v: number): number {
   if (v <= 0) return 1000;
   const pow = 10 ** Math.floor(Math.log10(v));
-  for (const mult of [1, 2, 2.5, 5, 10]) {
+  for (const mult of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) {
     if (mult * pow >= v) return mult * pow;
   }
   return 10 * pow;
