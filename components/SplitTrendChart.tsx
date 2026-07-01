@@ -1,15 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import type { SplitPoint } from "@/lib/stats";
-import { formatDateShort, formatMeters, formatSplit } from "@/lib/format";
+import { formatDateShort, formatSplit } from "@/lib/format";
 import { useMeasure } from "@/lib/useMeasure";
 import { ChartTooltip } from "./ChartTooltip";
+
+export interface TrendPoint {
+  id: string | number;
+  /** ISO date */
+  date: string;
+  /** Seconds per 500m */
+  split: number;
+  /** Extra tooltip context, e.g. "2k · 7:09.0" */
+  detail?: string;
+}
 
 const HEIGHT = 220;
 const MARGIN = { top: 12, right: 16, bottom: 26, left: 48 };
 
-export function SplitTrendChart({ points }: { points: SplitPoint[] }) {
+export function SplitTrendChart({ points }: { points: TrendPoint[] }) {
   const [containerRef, { width }] = useMeasure<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
 
@@ -106,7 +115,7 @@ export function SplitTrendChart({ points }: { points: SplitPoint[] }) {
           (p, i) =>
             i % labelEvery === 0 && (
               <text
-                key={p.session.id}
+                key={p.id}
                 x={coords[i].px}
                 y={HEIGHT - 8}
                 textAnchor="middle"
@@ -153,10 +162,10 @@ export function SplitTrendChart({ points }: { points: SplitPoint[] }) {
           x={coords[hover].px}
           y={coords[hover].py}
           containerWidth={width}
-          title={`${formatDateShort(points[hover].date)} · ${points[hover].session.type === "erg" ? "Erg" : "On water"}`}
+          title={formatDateShort(points[hover].date)}
           rows={[
             { value: `${formatSplit(points[hover].split)} /500m`, label: "avg split" },
-            { value: `${formatMeters(points[hover].session.distanceMeters)} m`, label: "distance" },
+            ...(points[hover].detail ? [{ value: points[hover].detail, label: "" }] : []),
           ]}
         />
       )}

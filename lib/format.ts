@@ -14,6 +14,15 @@ export function formatDuration(totalSeconds: number): string {
   return `${h > 0 ? `${h}:` : ""}${mm}:${String(sec).padStart(2, "0")}`;
 }
 
+/** Erg time with tenths when present, e.g. "7:09.5" or "21:30". */
+export function formatErgTime(totalSeconds: number): string {
+  const hasTenths = Math.round(totalSeconds * 10) % 10 !== 0;
+  if (!hasTenths) return formatDuration(totalSeconds);
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds - m * 60;
+  return `${m}:${s.toFixed(1).padStart(4, "0")}`;
+}
+
 /** Split as "m:ss.t" per 500m, e.g. "1:52.3". */
 export function formatSplit(splitSeconds: number): string {
   const m = Math.floor(splitSeconds / 60);

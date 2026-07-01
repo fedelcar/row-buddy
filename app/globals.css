@@ -47,6 +47,7 @@
   --color-baseline: var(--baseline);
   --color-hairline: var(--border-hairline);
   --color-series-1: var(--series-1);
+  --color-series-1-wash: var(--series-1-wash);
   --color-delta-good: var(--delta-good);
   --color-delta-bad: var(--delta-bad);
   --color-accent: var(--accent);
