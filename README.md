@@ -46,21 +46,10 @@ You'll end up with a private URL you can put on the coach's phone home screen.
      mashing is fine, or run `openssl rand -base64 32` in a terminal).
    - `SEED_USERNAME` — the login name, e.g. `coach`.
    - `SEED_PASSWORD` — the login password.
-6. **Create the tables and the account.** On your computer, in this folder:
-
-   ```bash
-   npm install
-   npm run db:push     # creates the tables
-   npm run db:seed     # creates the login + sample data
-   ```
-
-   For these two commands you need the production database's address: in
-   Vercel go to **Storage → your database → `.env.local` tab → Copy
-   Snippet**, and paste it into a file called `.env.local` in this folder
-   (alongside `SEED_USERNAME` / `SEED_PASSWORD`). The file is git-ignored.
-7. In the Vercel project, open **Deployments** and click **Redeploy** on the
-   latest one. Open the URL — sign in with the username and password from
-   step 5. Done. 🎉
+6. Open **Deployments** and click **Redeploy** on the latest one. That's it —
+   on its first start the app creates its own tables, sets up your login,
+   and fills in a demo squad so it looks alive. Sign in with the username
+   and password from step 5. 🎉
 
 Every future `git push` to `main` deploys automatically.
 
@@ -72,19 +61,17 @@ vercel login
 vercel link          # pick/create the project
 vercel install neon  # provisions the database
 vercel env add AUTH_SECRET && vercel env add SEED_USERNAME && vercel env add SEED_PASSWORD
-vercel env pull .env.local
-npm run db:push && npm run db:seed
 vercel deploy --prod
 ```
 
 ## Everyday things
 
-- **Change the password** — set a new `SEED_PASSWORD` in `.env.local` and run
-  `npm run db:seed` again; it updates the existing account (sample data is
-  never duplicated). Update the Vercel env var too so they stay in sync.
+- **Change the password** — edit the `SEED_PASSWORD` env var in Vercel and
+  redeploy; the account updates itself on the next start.
 - **Add another login** (e.g. an assistant coach) — change `SEED_USERNAME`
-  and `SEED_PASSWORD` in `.env.local` and run `npm run db:seed`; a new
-  account is created alongside the old one.
+  and `SEED_PASSWORD` in Vercel and redeploy; a new account is created
+  alongside the old one (or run `npm run db:seed` locally against the
+  production `DATABASE_URL`).
 - **Add an athlete** — in the app: Athletes → "+ Add athlete". No code needed.
 - **Remove the sample data** — delete sessions/tests in the app, or reset the
   database in Neon and re-run step 6 with your real squad.
@@ -93,13 +80,13 @@ vercel deploy --prod
 
 ```bash
 npm install
-npm run db:push && npm run db:seed   # one-time: local tables + login
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) and sign in with `coach`
 / `row-buddy` (the defaults when `SEED_USERNAME`/`SEED_PASSWORD` aren't set).
-No database install needed — locally the app uses an embedded Postgres
+No database install or setup commands needed — on first start the app
+migrates and seeds itself, using an embedded Postgres
 ([PGlite](https://pglite.dev)) stored in `.pglite/`. Set `DATABASE_URL` in
 `.env.local` if you'd rather point at a real Postgres.
 
